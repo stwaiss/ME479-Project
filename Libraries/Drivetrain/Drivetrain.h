@@ -7,43 +7,26 @@
 #ifndef Drivetrain_h
 #define Drivetrain_h
 
-#include "Arduino=.h"
+#include "Arduino.h"
+#include "Servo.h"
+
 
 class Drivetrain{
 
 	//declare private variables
 	private:
-	int resetPin;
-	int powerPin;
-	int LCDPin;
-	volatile unsigned long cycleCount;
-	volatile int powerStatus;
-	volatile int isStuck;
-	volatile int timesIsStuck;
-	volatile unsigned long stationTimer;
-	
+	Servo leftMotor;
+	Servo rightMotor;	
+	int leftMotorPin;
+	int rightMotorPin;
+
 	//define public constructors and methods
 	public:
-	StationBay();
-	StationBay(int rp, int pp, int lcd);
-	StationBay(int rp, int pp, int lcd, long cc);
-	long getCycleCount();
-	int getPowerStatus();
-	int getIsStuck();
-	unsigned long getStationTimer();
-	int getTimesIsStuck();
-	int getPowerPin();
-	int getResetPin();
-	int getLCDPin();
+	Drivetrain();
+	Drivetrain(int lmp, int rmp);
 
-	void incrementCycleCount();
-	void resetCycleCount();
-	void powerStatusOff();
-	void powerStatusOn();
-	void setIsStuckTrue();
-	void setIsStuckFalse();
-	void resetTimesIsStuck();
-	void incrementTimesIsStuck();
-	void setStationTimer(long st);
+	void drive(int speed, int turnDegrees);
+	void stop();
+
 };
 #endif

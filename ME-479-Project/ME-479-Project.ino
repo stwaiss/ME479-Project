@@ -2,10 +2,12 @@
  * 
  */
 
+#include <Servo.h>
 #include <LiquidCrystal.h>
 #include <Drivetrain.h>
 #include <PinChangeInt.h>
 
+Drivetrain drivetrain;
 
 
 void setup() {
