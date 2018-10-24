@@ -5,9 +5,13 @@
 #include <Servo.h>
 #include <LiquidCrystal.h>
 #include <Drivetrain.h>
+#include <Ultrasonic.h>
+#include <Clock.h>
 #include <PinChangeInt.h>
 
 Drivetrain drivetrain;
+Clock clock;
+Ultrasonic sensor1;
 
 
 void setup() {
