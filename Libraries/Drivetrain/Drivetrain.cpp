@@ -35,27 +35,22 @@ Drivetrain::Drivetrain(int lmp, int rmp){
 
 //Define all public methods and their routines
 
-void Drivetrain::drive(int speed){
+void Drivetrain::driveForward(int speed){
 	
-	// If speed > 90, ramp up slowly to speed going forward
-	if(speed > 90){
-		for(int i = 90; i <= speed && i>=180; i = i+5){
-			leftMotor.write(i);
-			rightMotor.write(i);
+	// Ramp up slowly to speed going forward.
+	for(int i = 90; i <= speed && i>=180; i = i+5){
+		leftMotor.write(i);
+		rightMotor.write(i);
 
-			delay(50);
-		}
+		delay(50);
 	}
+}
 
-	// Else, if speed < 90, ramp up slowly to speed going backward
-	else{
-		for(int i = 90; i >= speed && i>=0; i = i-5){
-			leftMotor.write(i);
-			rightMotor.write(i);
+void Drivetrain::turn90(){
+	leftMotor.write(180);
+	rightMotor.write(0);
 
-			delay(50);
-		}
-	}
+	delay(375);
 }
 
 void Drivetrain::stop(){

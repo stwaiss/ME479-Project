@@ -25,7 +25,8 @@ class Drivetrain{
 	Drivetrain();
 	Drivetrain(int lmp, int rmp);
 
-	void drive(int speed);
+	void driveForward(int speed);
+	void turn90();
 	void stop();
 
 };

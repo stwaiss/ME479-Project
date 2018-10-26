@@ -15,8 +15,6 @@
 const int eButtonPin = 100;
 const int sensorFL_Pin = 101;
 const int sensorFR_Pin = 102;
-const int sensorRL_Pin = 103;
-const int sensorRR_Pin = 104;
 const int leftMotorPin = 105;
 const int rightMotorPin = 106;
 
@@ -39,36 +37,78 @@ Clock alarmClock;
 Drivetrain drivetrain(leftMotorPin, rightMotorPin);
 Ultrasonic sensorFL(sensorFL_Pin);
 Ultrasonic sensorFR(sensorFR_Pin);
-Ultrasonic sensorRL(sensorRL_Pin);
-Ultrasonic sensorRR(sensorRR_Pin);
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
+// Set up variables needed for arithmetic problem
+int smallerNumber = (int) random(100, 400);
+int biggerNumber = (int) random(smallerNumber, smallerNumber*2);
 
+boolean eButtonPressed = false;
 
 void setup() {
   // Initialize interrupt timer library for 1 million - milliseconds (1 second);
   Timer1.initialize(1000000); 
-  
-  // Set the Emergency Stop Button as an interrupt service routine
-  attachInterrupt(digitalPinToInterrupt(eButtonPin),eButtonStop,RISING);
 
   // Initialize LCD screen and print start-up message
   LCD.begin(16,2);
   LCD.print("Hello!");
-  
-  setClocks(currentClock, "current time");
 
-  Timer1.attachInterrupt(timerInterrupt);
+  // Receive user input to set current time
+  setClocks(currentClock, "current time");
+  // Attach Timer Interrupt to ensure correct current time
+  Timer1.attachInterrupt(clockInterrupt);
+
+  // Receive user input to set alarm time
   setClocks(alarmClock, "alarm clock");
   
 }
 
 void loop() {
+  // Check to see if the alarm should go off
   if(alarmClock.compareTimes(currentClock)){
-    //Start sounding alarm noise
+    // Set the Emergency Stop Button as an interrupt service routine
+    attachInterrupt(digitalPinToInterrupt(eButtonPin),eButtonStop,RISING);
 
+    
+    // Clear LCD screen, set cursor to home, and print message
+    LCD.clear();
+    LCD.setCursor(0,0);
+    LCD.print("Time to wake up!");
+
+    // Set LCD cursor to second line and print math problem
+    LCD.setCursor(0,1);
+    LCD.print(biggerNumber);
+    LCD.setCursor(3,1);
+    LCD.print(" + ");
+    LCD.setCursor(6,1);
+    LCD.print(smallerNumber);
+    LCD.setCursor(9,1);
+    LCD.print(" = ");
+
+    // Set LCD cursor to second line, at the end of the math problem
+    LCD.setCursor(12,1);
+
+    // Start sounding alarm noise
+    
+
+    // Allow drivetrain to start moving
+    drivetrain.driveForward(150);
+
+
+    int userInput = -1;
     //Begin driving in avoidance mode
-    drivetrain.drive(150);
+    while(userInput != biggerNumber + smallerNumber){
+       // Ping ultrasonic sensors to check if something is in the way.
+       sensorFL.ping();
+       sensorFR.ping();
+
+       if(sensorFL.getDuration() < 700 || sensorFR.getDuration() < 700){
+          drivetrain.turn90();
+          drivetrain.driveForward(150);
+       }
+
+      // Write code to recieve user input from keypad 
+    }
   }
 }
 
@@ -76,7 +116,7 @@ void loop() {
 // This is the interrupt service routine for the timer that runs to keep the current time up to date
 // in the background while the rest of the program runs
 
-void timerInterrupt(){
+void clockInterrupt(){
   currentClock.incrementTime();
 }
 
@@ -85,13 +125,16 @@ void timerInterrupt(){
 //****************************************************************************************************
 // This is the interrupt service routine for when the Emergency Stop Button is depressed.
 // It stops the drivetrain and exits.
+
 void eButtonStop(){
   drivetrain.stop();
+  eButtonPressed = true;
 }
 
 
 //*****************************************************************************************************
 // This function takes user input from the keypad to set the current time and the time the alarm should go off.
+
 void setClocks(Clock c, String clockName){
  
   LCD.clear();
