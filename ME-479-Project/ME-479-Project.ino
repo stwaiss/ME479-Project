@@ -8,8 +8,8 @@
 #include <Drivetrain.h>
 #include <Ultrasonic.h>
 #include <Clock.h>
-#include <PinChangeInt.h>
 #include <Keypad.h>
+#include <TimerOne.h>
 
 // Define various pin constants;
 const int eButtonPin = 100;
@@ -37,15 +37,18 @@ LiquidCrystal LCD(1,2,3,4,5,6);
 Clock currentClock;
 Clock alarmClock;
 Drivetrain drivetrain(leftMotorPin, rightMotorPin);
-Ultrasonic sensorFL();
-Ultrasonic sensorFR();
-Ultrasonic sensorRL();
-Ultrasonic sensorRR();
+Ultrasonic sensorFL(sensorFL_Pin);
+Ultrasonic sensorFR(sensorFR_Pin);
+Ultrasonic sensorRL(sensorRL_Pin);
+Ultrasonic sensorRR(sensorRR_Pin);
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
 
 
 void setup() {
+  // Initialize interrupt timer library for 1 million - milliseconds (1 second);
+  Timer1.initialize(1000000); 
+  
   // Set the Emergency Stop Button as an interrupt service routine
   attachInterrupt(digitalPinToInterrupt(eButtonPin),eButtonStop,RISING);
 
@@ -55,16 +58,31 @@ void setup() {
   
   setClocks(currentClock, "current time");
 
+  Timer1.attachInterrupt(timerInterrupt);
   setClocks(alarmClock, "alarm clock");
   
 }
 
 void loop() {
+  if(alarmClock.compareTimes(currentClock)){
+    //Start sounding alarm noise
 
+    //Begin driving in avoidance mode
+    drivetrain.drive(150);
+  }
 }
 
 //****************************************************************************************************
+// This is the interrupt service routine for the timer that runs to keep the current time up to date
+// in the background while the rest of the program runs
 
+void timerInterrupt(){
+  currentClock.incrementTime();
+}
+
+
+
+//****************************************************************************************************
 // This is the interrupt service routine for when the Emergency Stop Button is depressed.
 // It stops the drivetrain and exits.
 void eButtonStop(){
@@ -73,7 +91,7 @@ void eButtonStop(){
 
 
 //*****************************************************************************************************
-
+// This function takes user input from the keypad to set the current time and the time the alarm should go off.
 void setClocks(Clock c, String clockName){
  
   LCD.clear();

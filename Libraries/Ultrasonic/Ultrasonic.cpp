@@ -63,3 +63,12 @@ void Ultrasonic::ping(){
 
 }
 
+long Ultrasonic::getDuration(){
+	return metrics[0];
+}
+
+
+long Ultrasonic::getInches(){
+	return metrics[1];
+}
+

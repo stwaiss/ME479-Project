@@ -35,23 +35,27 @@ Drivetrain::Drivetrain(int lmp, int rmp){
 
 //Define all public methods and their routines
 
-void Drivetrain::drive(int speed, int rotation){
-	if(rotation == 0){
-		leftMotor.write(speed);
-		rightMotor.write(speed);			
-	}	
+void Drivetrain::drive(int speed){
+	
+	// If speed > 90, ramp up slowly to speed going forward
+	if(speed > 90){
+		for(int i = 90; i <= speed && i>=180; i = i+5){
+			leftMotor.write(i);
+			rightMotor.write(i);
 
-	else{
-		//implement code to turn
-
-		//Normalize rotation input so that only positive values between 0 and 360 are acceptable
-		//and that rotation is measured clock-wise from the direction the robot is currently facing 
-		rotation = abs(rotation);
-		int multiplier = rotation/360;
-		int turnDegrees = rotation - multiplier*360; 
+			delay(50);
+		}
 	}
 
-	return;
+	// Else, if speed < 90, ramp up slowly to speed going backward
+	else{
+		for(int i = 90; i >= speed && i>=0; i = i-5){
+			leftMotor.write(i);
+			rightMotor.write(i);
+
+			delay(50);
+		}
+	}
 }
 
 void Drivetrain::stop(){

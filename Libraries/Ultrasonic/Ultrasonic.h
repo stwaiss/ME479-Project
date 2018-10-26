@@ -25,5 +25,8 @@ class Ultrasonic{
 
 	long microsecondsToInches(long microseconds);
 	void ping();
+
+	long getDuration();
+	long getInches();
 };
 #endif
