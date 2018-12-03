@@ -15,7 +15,8 @@ class Ultrasonic{
 	//declare private variables
 	private:	
 	int signalPin;
-	long metrics[];
+	int duration;
+	int inches;
 
 
 	//define public constructors and methods
@@ -26,7 +27,7 @@ class Ultrasonic{
 	long microsecondsToInches(long microseconds);
 	void ping();
 
-	long getDuration();
-	long getInches();
+	int getDuration();
+	int getInches();
 };
 #endif

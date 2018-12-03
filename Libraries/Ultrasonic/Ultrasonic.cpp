@@ -13,12 +13,10 @@ Ultrasonic::Ultrasonic(){}
 
 //Define constructor with 3 integer parameters
 Ultrasonic::Ultrasonic(int signal){
-	int signalPin = signal;
-	long metrics[] = {0,0};			//duration, inches  
-
-
+	int signalPin = signal; 
 	pinMode(signalPin, INPUT);
-
+	int duration = 0;
+	int inches = 0;
 }
 
 
@@ -36,7 +34,6 @@ long Ultrasonic::microsecondsToInches(long microseconds) {
 
 
 void Ultrasonic::ping(){
-	  long duration, inches;
 
 	  // The PING is triggered by a HIGH pulse of 2 or more microseconds.
 	  // Give a short LOW pulse beforehand to ensure a clean HIGH pulse:
@@ -51,24 +48,21 @@ void Ultrasonic::ping(){
 	  // whose duration is the time (in microseconds) from the sending of the ping
 	  // to the reception of its echo off of an object.
 	  pinMode(signalPin, INPUT);
-	  duration = pulseIn(signalPin, HIGH);
+	  duration = (int) pulseIn(signalPin, HIGH);
 
 	  // convert the time into a distance
-	  inches = microsecondsToInches(duration);
-
-	  metrics[0] = duration;
-	  metrics[1] = inches;
+	  inches = (int) microsecondsToInches(duration);
 
 	  return;
 
 }
 
-long Ultrasonic::getDuration(){
-	return metrics[0];
+int Ultrasonic::getDuration(){
+	return duration;
 }
 
 
-long Ultrasonic::getInches(){
-	return metrics[1];
+int Ultrasonic::getInches(){
+	return inches;
 }
 

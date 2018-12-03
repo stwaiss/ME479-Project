@@ -25,7 +25,7 @@ Drivetrain::Drivetrain(int lmp, int rmp){
 	pinMode(rightMotorPin, OUTPUT);
 
 	leftMotor.attach(lmp,1000,2000);                       //Set up Servo Outputs on pins defined above, initialize microstep
-		rightMotor.attach(rmp,1000,2000); 
+	rightMotor.attach(rmp,1000,2000); 
 
 	int leftOutput = 90;                                              //Define Outputs for Servo outputs to Sabertooth
 	int rightOutput = 90;
@@ -37,13 +37,9 @@ Drivetrain::Drivetrain(int lmp, int rmp){
 
 void Drivetrain::driveForward(int speed){
 	
-	// Ramp up slowly to speed going forward.
-	for(int i = 90; i <= speed && i>=180; i = i+5){
-		leftMotor.write(i);
-		rightMotor.write(i);
-
-		delay(50);
-	}
+	leftMotor.write(speed);
+	rightMotor.write(speed);
+	
 }
 
 void Drivetrain::turn90(){
