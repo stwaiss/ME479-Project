@@ -5,8 +5,7 @@
 
 // Define various pin constants;
 const int eButtonPin = 100;
-const int sensorFL_Pin = 2;
-const int sensorFR_Pin = 3;
+const int sensor_Pin = 2;
 const int leftMotorPin = 5;
 const int rightMotorPin = 6;
 
@@ -27,25 +26,19 @@ void setup() {
 }
 
 void loop() {
-      Serial.println("Drive Forward ");
-      drivetrainDrive(120);
+  drivetrainDrive(125);
 
-    // Ping ultrasonic sensors to check if something is in the way.
-       int usFLduration = ultrasonicPing(sensorFL_Pin);
-       int usFRduration = ultrasonicPing(sensorFR_Pin);
+// Ping ultrasonic sensors to check if something is in the way.
+   int usDuration = ultrasonicPing(sensor_Pin);
 
-       Serial.print("SensorFL: ");
-       Serial.print(usFLduration);
+   Serial.print("Ulrasonic Sensor: ");
+   Serial.println(usDuration);
+   if(usDuration < 2000){
+      drivetrainTurn90();
+      drivetrainDrive(125);
+   }
 
-       Serial.print(" SensorFR: ");
-       Serial.println(usFRduration);
-       if(usFLduration < 700 || usFRduration < 700){
-          drivetrainTurn90();
-          Serial.println("Turn");
-          drivetrainDrive(120);
-       }
-
-    delay(1000);
+  delay(100);
        
 }
 
@@ -62,10 +55,9 @@ void drivetrainStop(){
 }
 
 void drivetrainTurn90(){
-  Serial.println("Turning");
   leftMotor.write(150);
   rightMotor.write(30);
-  delay(750);
+  delay(500);
 }
 
 //*************************************************************************
