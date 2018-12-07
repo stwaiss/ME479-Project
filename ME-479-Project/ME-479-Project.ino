@@ -2,12 +2,19 @@
 #include <Servo.h>
 #include <LiquidCrystal.h>
 #include <Keypad.h>
+#include <TimerOne.h>
+#include <Adafruit_NeoPixel.h>
 
 // Define various pin constants;
 const int eButtonPin = 100;
 const int sensor_Pin = 2;
 const int leftMotorPin = 5;
 const int rightMotorPin = 6;
+
+int rand1 = 0;
+int rand2 = 0;
+boolean isSolved = false;
+boolean eButtonIsPressed = false;
 
 int curTime[] = {0,0,0};
 int alarmTime[] = {0,0,0};
@@ -28,11 +35,22 @@ byte rowPins[ROWS] = {42, 52 , 50, 46}; //connect to the row pinouts of the keyp
 byte colPins[COLS] = {44, 40, 48}; //connect to the column pinouts of the keypad
 
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
-
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(16, 24, NEO_GRB + NEO_KHZ800);
 
 void setup() {
   Serial.begin(9600);
   Serial.println("Booting Up");
+
+  // create random numbers for arithmetic problem
+  randomSeed(analogRead(1));
+  rand1 = random(0,99);
+  rand2 = random(0,99);
+  
+  // initialize neopixel ring
+  strip.begin();
+  strip.setBrightness(30); //adjust brightness here
+  strip.show(); // Initialize all pixels to 'off'
+  
   
   //Define digital pin modes
   pinMode(leftMotorPin, OUTPUT);
@@ -41,10 +59,16 @@ void setup() {
   leftMotor.attach(leftMotorPin);                       //Set up Servo Outputs on pins defined above, initialize microstep
   rightMotor.attach(rightMotorPin); 
 
-  Serial.println("Enter Current Time - hhmmss:\n");
-  startClock(curTime);
+  //Serial.println("Enter Current Time - hhmmss:\n");
+  //startClock(curTime);
+
+  // Initialize interrupt timer library for 1 million - milliseconds (1 second);
+  Timer1.initialize(1000000); 
+  //Timer1.attachInterrupt(timerInterrupt);
+
+  Serial.println("Enter Alarm Time - hhmmss:\n");
   startClock(alarmTime);
-  
+  //solveMath(rand1, rand2);
 }
 
 void loop() {
@@ -61,10 +85,41 @@ void loop() {
 //   }
 //
 //  delay(100);
-       
+
+
+//  solveMath(rand1, rand2);
+
+  // if current time equals alarm time, start alarm sequence
+  if(curTime[0] == alarmTime[0] && curTime[1] == alarmTime[1] && curTime[2] == alarmTime[2]){
+    // sound alarm
+    // turn on light ring
+    // start driving
+    // display math problem to be solved
+
+
+    // while math problem is not solved, drive around and be annoying
+    while(!isSolved){
+      colorWipe(strip.Color(255, 0, 0), 50); // Red
+      
+      drivetrainDrive(125);
+
+      // Ping ultrasonic sensors to check if something is in the way.
+      int usDuration = ultrasonicPing(sensor_Pin);
+
+     Serial.print("Ulrasonic Sensor: ");
+     Serial.println(usDuration);
+     if(usDuration < 2000){
+        drivetrainTurn90();
+        drivetrainDrive(125);
+      }
+
+     colorWipe(strip.Color(0, 0, 0), 50); // off 
+    }
+  }
+
 }
 
-//****************************************************************************************
+//**************************************************************************
 
 void drivetrainDrive(int speed){
   leftMotor.write(speed);
@@ -82,7 +137,7 @@ void drivetrainTurn90(){
   delay(500);
 }
 
-//*************************************************************************
+//**************************************************************************
 int ultrasonicPing(int signalPin){
     int duration = 0;
     // The PING is triggered by a HIGH pulse of 2 or more microseconds.
@@ -106,7 +161,7 @@ int ultrasonicPing(int signalPin){
 //**************************************************************************
 void startClock(int clockTime[]){  
   Serial.println("In startClock");
-  char thisTime[] = {0,0,0,0,0,0};
+  char thisTime[] = {'0','0','0','0','0','0'};
 
   // iterate 6 times, 1 for every digit required to define the time
   for(int i = 0; i < 6; i++){
@@ -117,16 +172,68 @@ void startClock(int clockTime[]){
     char key = keypad.getKey();
 
     // while user input equals nothing, keep polling
-    while(key == NO_KEY){
-      //Serial.println("waiting ");
-      key = keypad.getKey();
+    
+    // if in 10s column of hours, ignore 3-9,*,#
+    if(i == 0){
+      while(key == NO_KEY || key == '*' || key == '#' 
+          ||key == '3' || key == '4' || key == '5'|| key == '6'
+          || key == '7'|| key == '8'|| key == '9' ){
+        
+        key = keypad.getKey();
+      }
     }
 
+    // if in 1s column of hours
+    else if(i == 1){
+      
+      // if 10s column of hours == 2, ignore 4-9,*,#
+      if(thisTime[0] == '2'){
+         while(key == NO_KEY || key == '*' || key == '#' 
+          ||key == '4' ||key == '5' ||key == '6' || key == '7'
+          ||key == '8'|| key == '9' ){
+        
+            key = keypad.getKey();
+          }
+      }
+
+      // else ignore *,#
+      else{
+        while(key == NO_KEY || key == '*' || key == '#'){
+          key = keypad.getKey();
+        }
+      }
+    }
+
+    // if in 10s column of minutes, ignore 6-9,*,#
+    else if(i == 2){
+      while(key == NO_KEY || key == '*' || key == '#' 
+          ||key == '6' || key == '7'|| key == '8'|| key == '9' ){
+        
+        key = keypad.getKey();
+      }
+    }
+
+    // if in 10s column of seconds, ignore 6-9,*,#
+    else if(i == 4){
+      while(key == NO_KEY || key == '*' || key == '#' 
+          ||key == '6'|| key == '7'|| key == '8'|| key == '9' ){
+        
+        key = keypad.getKey();
+      }
+    }    
+
+    // else if i != 0,1,2,4, ignore *,#
+    else{
+      while(key == NO_KEY || key == '*' || key == '#'){
+        key = keypad.getKey();
+      }
+    }
+    
     // now that we have a value, save value and print
     thisTime[i] = key;
     Serial.print(key);
   }
-
+  
   // Concatenate digits, convert to integer, and save to array
   clockTime[0] = ((String)thisTime[0] + thisTime[1]).toInt();
   clockTime[1] = ((String)thisTime[2] + thisTime[3]).toInt();  
@@ -137,10 +244,104 @@ void startClock(int clockTime[]){
   Serial.print(":");
   Serial.print(clockTime[1]);
   Serial.print(":");
-  Serial.print(clockTime[2]);      
+  Serial.print(clockTime[2]);
+
+  colorWipe(strip.Color(0, 255, 0), 50); // Green
+  colorWipe(strip.Color(0, 0, 0), 50); // Off      
 }
 
+void incrementClock(int clockTime[]){
+  clockTime[2]++;
 
+  // if seconds > 59, increment minutes, reset seconds
+  if(clockTime[2] > 59){
+    clockTime[1]++;
+    clockTime[2] = 0;
+  }
 
+  // if minutes > 59, increment hours, reset minutes
+  if(clockTime[1] > 59){
+    clockTime[0]++;
+    clockTime[1] = 0;
+  }
 
+  // if hours > 23, reset hours
+  if(clockTime[0] > 23){
+    clockTime[0] = 0;
+  }
+}
+
+//**************************************************************************
+void solveMath(int rand1, int rand2){
+  // create user integer to compare against actual
+  int userSol = 0;
+
+  // while userSoluition != the sum of the two random numbers...
+  while(userSol != rand1+rand2){
+    
+    // create char array to hold individual user inputs 
+    char userArray[] = {0,0,0};
+
+    // give prompt to user
+    Serial.print("Solve: ");
+    Serial.print(rand1);
+    Serial.print(" + ");
+    Serial.print(rand2);
+    Serial.println(", add leading 0s");
+    
+
+    // iterate through userArray, waiting for user input to fill in elements
+    for(int i = 0; i < 3; i++){
+  
+      //Serial.println("In Math For Loop");
+      
+      // create char to hold user input
+      char key = keypad.getKey();
+  
+      // while user input equals nothing, keep polling
+      while(key == NO_KEY || key == '*' || key == '#'){
+        //Serial.println("waiting ");
+        key = keypad.getKey();
+      }
+  
+      // now that we have a value, save value and print
+      Serial.print(key); 
+      userArray[i] = key;
+    }
+
+    // Concatenate individual char keys into String, then convert to Int
+    userSol = ((String)userArray[0] + userArray[1] + userArray[2]).toInt();
+
+    if(userSol != rand1+rand2){
+      colorWipe(strip.Color(255, 0, 0), 50); // Red
+      colorWipe(strip.Color(0, 0, 0), 50); // Off
+    }
+  }
+  colorWipe(strip.Color(0, 255, 0), 50); // Green
+  colorWipe(strip.Color(0, 0, 0), 50); // Off
+  Serial.println("\nSolved!");
+  isSolved = true;
+}
+
+//**************************************************************************
+
+// Fill the dots one after the other with a color
+void colorWipe(uint32_t c, uint8_t wait) {
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+      strip.setPixelColor(i, c);
+      strip.show();
+      delay(wait);
+  }
+}
+
+//**************************************************************************
+void timerInterrupt(){
+  incrementClock(curTime);
+}
+
+//**************************************************************************
+void eButtonPress(){
+  //stop drivetrain
+  eButtonIsPressed = true;
+}
 
