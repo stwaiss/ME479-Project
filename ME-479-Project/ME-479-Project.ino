@@ -6,15 +6,18 @@
 #include <Adafruit_NeoPixel.h>
 
 // Define various pin constants;
-const int eButtonPin = 100;
+const int eButtonPin = 3;
 const int sensor_Pin = 2;
 const int leftMotorPin = 5;
 const int rightMotorPin = 6;
+
+const int alarmPin = 32;
 
 int rand1 = 0;
 int rand2 = 0;
 boolean isSolved = false;
 boolean eButtonIsPressed = false;
+boolean alarmIsSounding = false;
 
 int curTime[] = {0,0,0};
 int alarmTime[] = {0,0,0};
@@ -37,14 +40,20 @@ byte colPins[COLS] = {44, 40, 48}; //connect to the column pinouts of the keypad
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(16, 24, NEO_GRB + NEO_KHZ800);
 
+const int rs = 13, en = 12, d4 = 14, d5 = 15, d6 = 16, d7 = 17;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
 void setup() {
+  lcd.begin(20, 4);
+  lcd.print("Booting up!");  
+  
   Serial.begin(9600);
   Serial.println("Booting Up");
 
   // create random numbers for arithmetic problem
   randomSeed(analogRead(1));
-  rand1 = random(0,99);
-  rand2 = random(0,99);
+  rand1 = random(50,99);
+  rand2 = random(50,99);
   
   // initialize neopixel ring
   strip.begin();
@@ -60,34 +69,36 @@ void setup() {
   rightMotor.attach(rightMotorPin); 
 
   //Serial.println("Enter Current Time - hhmmss:\n");
-  //startClock(curTime);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Enter Current Time");  
+  startClock(curTime);
 
   // Initialize interrupt timer library for 1 million - milliseconds (1 second);
   Timer1.initialize(1000000); 
-  //Timer1.attachInterrupt(timerInterrupt);
+  Timer1.attachInterrupt(timerInterrupt);
 
-  Serial.println("Enter Alarm Time - hhmmss:\n");
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Enter Alarm Time");
+  //Serial.println("Enter Alarm Time");
   startClock(alarmTime);
-  //solveMath(rand1, rand2);
 }
 
 void loop() {
-//  drivetrainDrive(125);
-//
-//// Ping ultrasonic sensors to check if something is in the way.
-//   int usDuration = ultrasonicPing(sensor_Pin);
-//
-//   Serial.print("Ulrasonic Sensor: ");
-//   Serial.println(usDuration);
-//   if(usDuration < 2000){
-//      drivetrainTurn90();
-//      drivetrainDrive(125);
-//   }
-//
-//  delay(100);
 
+  //print the time on the LCD panel)
+  lcd.clear();
+  lcd.setCursor(06,0);
+  lcd.print("Time is:");
+  lcd.setCursor(6,2);
+  lcd.print(curTime[0]);
+  lcd.print(":");
+  lcd.print(curTime[1]);
+  lcd.print(":");
+  lcd.print(curTime[2]);
 
-//  solveMath(rand1, rand2);
+  delay(100);
 
   // if current time equals alarm time, start alarm sequence
   if(curTime[0] == alarmTime[0] && curTime[1] == alarmTime[1] && curTime[2] == alarmTime[2]){
@@ -96,25 +107,39 @@ void loop() {
     // start driving
     // display math problem to be solved
 
+    pinMode(eButtonPin, INPUT);
+    attachInterrupt(digitalPinToInterrupt(eButtonPin), eButtonPress, FALLING);
+    
+    drivetrainDrive(125);
+
+    pinMode(alarmPin, OUTPUT);
+    digitalWrite(alarmPin, LOW);
+    delay(1000);
 
     // while math problem is not solved, drive around and be annoying
     while(!isSolved){
+      alarmIsSounding = true;
       colorWipe(strip.Color(255, 0, 0), 50); // Red
-      
-      drivetrainDrive(125);
 
       // Ping ultrasonic sensors to check if something is in the way.
-      int usDuration = ultrasonicPing(sensor_Pin);
-
-     Serial.print("Ulrasonic Sensor: ");
-     Serial.println(usDuration);
-     if(usDuration < 2000){
-        drivetrainTurn90();
-        drivetrainDrive(125);
-      }
-
+      if(!eButtonIsPressed){
+        int usDuration = ultrasonicPing(sensor_Pin);
+  
+        Serial.print("Ulrasonic Sensor: ");
+        Serial.println(usDuration);
+        if(usDuration < 2000){
+          drivetrainTurn90();
+          drivetrainDrive(125);
+        }
+     }
      colorWipe(strip.Color(0, 0, 0), 50); // off 
+
+     solveMath(rand1,rand2);
     }
+
+    digitalWrite(alarmPin, HIGH);
+    delay(1000);
+    drivetrainStop();
   }
 
 }
@@ -165,7 +190,7 @@ void startClock(int clockTime[]){
 
   // iterate 6 times, 1 for every digit required to define the time
   for(int i = 0; i < 6; i++){
-
+    lcd.setCursor(i,1);
     Serial.println("In For Loop");
     
     // create char to hold user input
@@ -231,6 +256,7 @@ void startClock(int clockTime[]){
     
     // now that we have a value, save value and print
     thisTime[i] = key;
+    lcd.print(key);
     Serial.print(key);
   }
   
@@ -238,6 +264,17 @@ void startClock(int clockTime[]){
   clockTime[0] = ((String)thisTime[0] + thisTime[1]).toInt();
   clockTime[1] = ((String)thisTime[2] + thisTime[3]).toInt();  
   clockTime[2] = ((String)thisTime[4] + thisTime[5]).toInt();
+
+  lcd.clear();
+
+  lcd.setCursor(0,0);
+  lcd.print("You Entered: ");
+  lcd.setCursor(0,1);
+  lcd.print(clockTime[0]);
+  lcd.print(":");
+  lcd.print(clockTime[1]);
+  lcd.print(":");
+  lcd.print(clockTime[2]);
 
   Serial.println();
   Serial.print(clockTime[0]);
@@ -247,7 +284,9 @@ void startClock(int clockTime[]){
   Serial.print(clockTime[2]);
 
   colorWipe(strip.Color(0, 255, 0), 50); // Green
-  colorWipe(strip.Color(0, 0, 0), 50); // Off      
+  colorWipe(strip.Color(0, 0, 0), 50); // Off    
+
+  delay(1000);  
 }
 
 void incrementClock(int clockTime[]){
@@ -283,6 +322,15 @@ void solveMath(int rand1, int rand2){
     char userArray[] = {0,0,0};
 
     // give prompt to user
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Solve this problem");
+    lcd.setCursor(0,1);
+    lcd.print(rand1);
+    lcd.print("+");
+    lcd.print(rand2);
+
+    
     Serial.print("Solve: ");
     Serial.print(rand1);
     Serial.print(" + ");
@@ -305,6 +353,8 @@ void solveMath(int rand1, int rand2){
       }
   
       // now that we have a value, save value and print
+      lcd.setCursor(i,2);
+      lcd.print(key);
       Serial.print(key); 
       userArray[i] = key;
     }
@@ -320,6 +370,10 @@ void solveMath(int rand1, int rand2){
   colorWipe(strip.Color(0, 255, 0), 50); // Green
   colorWipe(strip.Color(0, 0, 0), 50); // Off
   Serial.println("\nSolved!");
+  lcd.clear();
+  lcd.setCursor(6,0);
+  lcd.print("SOLVED!");
+  delay(1000);
   isSolved = true;
 }
 
@@ -337,11 +391,14 @@ void colorWipe(uint32_t c, uint8_t wait) {
 //**************************************************************************
 void timerInterrupt(){
   incrementClock(curTime);
+
+  if(!eButtonIsPressed && alarmIsSounding){}  
 }
 
 //**************************************************************************
 void eButtonPress(){
   //stop drivetrain
+  drivetrainStop();
   eButtonIsPressed = true;
 }
 
