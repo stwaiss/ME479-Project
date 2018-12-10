@@ -6,7 +6,6 @@
 #include <Adafruit_NeoPixel.h>
 
 // Define various pin constants;
-const int eButtonPin = 3;
 const int sensor_Pin = 2;
 const int leftMotorPin = 5;
 const int rightMotorPin = 6;
@@ -45,7 +44,9 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 void setup() {
   lcd.begin(20, 4);
-  lcd.print("Booting up!");  
+  lcd.setCursor(5,0);
+  lcd.print("Booting up!");
+  delay(2000);  
   
   Serial.begin(9600);
   Serial.println("Booting Up");
@@ -70,7 +71,7 @@ void setup() {
 
   //Serial.println("Enter Current Time - hhmmss:\n");
   lcd.clear();
-  lcd.setCursor(0,0);
+  lcd.setCursor(1,0);
   lcd.print("Enter Current Time");  
   startClock(curTime);
 
@@ -79,7 +80,7 @@ void setup() {
   Timer1.attachInterrupt(timerInterrupt);
 
   lcd.clear();
-  lcd.setCursor(0,0);
+  lcd.setCursor(2,0);
   lcd.print("Enter Alarm Time");
   //Serial.println("Enter Alarm Time");
   startClock(alarmTime);
@@ -89,14 +90,23 @@ void loop() {
 
   //print the time on the LCD panel)
   lcd.clear();
-  lcd.setCursor(06,0);
+  lcd.setCursor(6,0);
   lcd.print("Time is:");
-  lcd.setCursor(6,2);
+  lcd.setCursor(6,1);
   lcd.print(curTime[0]);
   lcd.print(":");
   lcd.print(curTime[1]);
   lcd.print(":");
   lcd.print(curTime[2]);
+
+  lcd.setCursor(3,2);
+  lcd.print("Alarm set for:");
+  lcd.setCursor(6,3);
+  lcd.print(alarmTime[0]);
+  lcd.print(":");
+  lcd.print(alarmTime[1]);
+  lcd.print(":");
+  lcd.print(alarmTime[2]);
 
   delay(100);
 
@@ -106,11 +116,8 @@ void loop() {
     // turn on light ring
     // start driving
     // display math problem to be solved
-
-    pinMode(eButtonPin, INPUT);
-    attachInterrupt(digitalPinToInterrupt(eButtonPin), eButtonPress, FALLING);
     
-    drivetrainDrive(125);
+    drivetrainDrive(110);
 
     pinMode(alarmPin, OUTPUT);
     digitalWrite(alarmPin, LOW);
@@ -129,17 +136,17 @@ void loop() {
         Serial.println(usDuration);
         if(usDuration < 2000){
           drivetrainTurn90();
-          drivetrainDrive(125);
+          drivetrainDrive(110);
         }
      }
      colorWipe(strip.Color(0, 0, 0), 50); // off 
 
+     lcd.clear();
      solveMath(rand1,rand2);
     }
-
+    drivetrainStop();
     digitalWrite(alarmPin, HIGH);
     delay(1000);
-    drivetrainStop();
   }
 
 }
@@ -190,7 +197,7 @@ void startClock(int clockTime[]){
 
   // iterate 6 times, 1 for every digit required to define the time
   for(int i = 0; i < 6; i++){
-    lcd.setCursor(i,1);
+    lcd.setCursor(6+i,1);
     Serial.println("In For Loop");
     
     // create char to hold user input
@@ -267,9 +274,9 @@ void startClock(int clockTime[]){
 
   lcd.clear();
 
-  lcd.setCursor(0,0);
+  lcd.setCursor(4,0);
   lcd.print("You Entered: ");
-  lcd.setCursor(0,1);
+  lcd.setCursor(6,1);
   lcd.print(clockTime[0]);
   lcd.print(":");
   lcd.print(clockTime[1]);
@@ -323,9 +330,9 @@ void solveMath(int rand1, int rand2){
 
     // give prompt to user
     lcd.clear();
-    lcd.setCursor(0,0);
+    lcd.setCursor(1,0);
     lcd.print("Solve this problem");
-    lcd.setCursor(0,1);
+    lcd.setCursor(7,1);
     lcd.print(rand1);
     lcd.print("+");
     lcd.print(rand2);
@@ -347,16 +354,39 @@ void solveMath(int rand1, int rand2){
       char key = keypad.getKey();
   
       // while user input equals nothing, keep polling
-      while(key == NO_KEY || key == '*' || key == '#'){
+      while(key == NO_KEY){
         //Serial.println("waiting ");
         key = keypad.getKey();
+
+        if(key == '*' || key == '#'){
+          drivetrainStop();
+          eButtonIsPressed = true;
+          lcd.setCursor(7,4);
+          lcd.print("button");
+          i--;
+        }
+
+        delay(100);
+        // Ping ultrasonic sensors to check if something is in the way.
+        if(!eButtonIsPressed){
+          int usDuration = ultrasonicPing(sensor_Pin);
+    
+          Serial.print("Ulrasonic Sensor: ");
+          Serial.println(usDuration);
+          if(usDuration < 2000){
+            drivetrainTurn90();
+            drivetrainDrive(110);
+          }
+        }
       }
   
       // now that we have a value, save value and print
-      lcd.setCursor(i,2);
-      lcd.print(key);
-      Serial.print(key); 
-      userArray[i] = key;
+      if(key != '*' && key != '#'){
+        lcd.setCursor(8+i,2);
+        lcd.print(key);
+        Serial.print(key); 
+        userArray[i] = key;
+      }
     }
 
     // Concatenate individual char keys into String, then convert to Int
@@ -391,14 +421,6 @@ void colorWipe(uint32_t c, uint8_t wait) {
 //**************************************************************************
 void timerInterrupt(){
   incrementClock(curTime);
-
-  if(!eButtonIsPressed && alarmIsSounding){}  
 }
 
-//**************************************************************************
-void eButtonPress(){
-  //stop drivetrain
-  drivetrainStop();
-  eButtonIsPressed = true;
-}
 
